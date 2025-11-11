@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アイコン生成ツール</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    canvas {
+      border: 2px solid white;
+      border-radius: 10px;
+      margin: 20px 0;
+      background: white;
+    }
+    button {
+      background: white;
+      color: #6366F1;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .input-group {
+      margin: 20px 0;
+    }
+    input[type="text"] {
+      padding: 10px;
+      font-size: 48px;
+      width: 100px;
+      text-align: center;
+      border: 2px solid white;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .info {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 20px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 PWAアイコン生成ツール</h1>
+
+    <div class="info">
+      <strong>使い方：</strong><br>
+      1. 絵文字を入力（デフォルト: 📊）<br>
+      2. 「アイコン生成」をクリック<br>
+      3. 各サイズのアイコンをダウンロード<br>
+      4. ダウンロードしたファイルをプロジェクトルートに配置
+    </div>
+
+    <div class="input-group">
+      <label for="emoji">絵文字（アイコンに表示する文字）：</label>
+      <input type="text" id="emoji" value="📊" maxlength="2">
+    </div>
+
+    <button onclick="generateIcons()">🎨 アイコン生成</button>
+
+    <div id="preview"></div>
+
+    <div class="info" style="margin-top: 30px;">
+      <strong>💡 ヒント：</strong><br>
+      • より本格的なアイコンが必要な場合は <a href="https://favicon.io" target="_blank" style="color: white; text-decoration: underline;">favicon.io</a> や <a href="https://realfavicongenerator.net" target="_blank" style="color: white; text-decoration: underline;">RealFaviconGenerator</a> をご利用ください<br>
+      • このツールは開発用の簡易アイコン生成ツールです
+    </div>
+  </div>
+
+  <script>
+    function generateIcons() {
+      const emoji = document.getElementById('emoji').value || '📊';
+      const sizes = [192, 512];
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Background gradient
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        // Emoji/Text
+        ctx.font = `${size * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'white';
+        ctx.fillText(emoji, size / 2, size / 2);
+
+        // Add to preview
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display: inline-block; margin: 10px; text-align: center;';
+
+        const previewCanvas = canvas.cloneNode();
+        previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+        previewCanvas.style.width = '100px';
+        previewCanvas.style.height = '100px';
+
+        const label = document.createElement('div');
+        label.textContent = `${size}x${size}`;
+        label.style.marginTop = '10px';
+        label.style.fontSize = '14px';
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = `ダウンロード (${size}px)`;
+        downloadBtn.onclick = () => {
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `icon-${size}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+        };
+
+        wrapper.appendChild(previewCanvas);
+        wrapper.appendChild(label);
+        wrapper.appendChild(document.createElement('br'));
+        wrapper.appendChild(downloadBtn);
+        preview.appendChild(wrapper);
+      });
+    }
+
+    // Generate on load
+    window.addEventListener('load', generateIcons);
+  </script>
+</body>
+</html>
