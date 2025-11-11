@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>日次 緊張構造チャート</title>
+
+  <!-- PWA Meta -->
+  <meta name="description" content="モバイルで毎日5〜10分の入力→保存→習慣化。緊張構造チャートで目標達成を可視化。">
+  <meta name="theme-color" content="#4F46E5">
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <!-- iOS Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="緊張構造">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Tailwind Config */
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4F46E5',
+            'primary-dark': '#4338CA',
+          }
+        }
+      }
+    }
+
+    /* Custom Styles */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      overscroll-behavior-y: contain;
+    }
+
+    /* Focus visible for accessibility */
+    *:focus-visible {
+      outline: 2px solid #4F46E5;
+      outline-offset: 2px;
+    }
+
+    /* Bottom Navigation safe area */
+    .bottom-nav {
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    }
+
+    /* Bottom CTA safe area */
+    .bottom-cta {
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+
+    /* Timer animation */
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .pulse-slow {
+      animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    /* Success animation */
+    @keyframes success-bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .success-bounce {
+      animation: success-bounce 0.5s ease-in-out;
+    }
+
+    /* Streak badge shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .streak-shimmer {
+      background: linear-gradient(90deg, #fbbf24 0%, #fcd34d 50%, #fbbf24 100%);
+      background-size: 200% auto;
+      animation: shimmer 2s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Dark mode overrides */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #111827;
+        color: #F3F4F6;
+      }
+    }
+
+    /* Hidden utility */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Smooth scroll for modals */
+    .modal-content {
+      scroll-behavior: smooth;
+    }
+
+    /* Action item drag handle (future enhancement) */
+    .action-item {
+      touch-action: pan-y;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen pb-20">
+
+  <!-- Install Banner -->
+  <div id="installBanner" class="hidden fixed top-0 left-0 right-0 z-50 bg-primary text-white p-4 shadow-lg" style="padding-top: calc(1rem + env(safe-area-inset-top));">
+    <div class="flex items-center justify-between max-w-md mx-auto">
+      <div class="flex-1">
+        <p class="text-sm font-medium">ホーム画面に追加して快適に使う</p>
+      </div>
+      <button id="installBtn" class="ml-4 px-4 py-2 bg-white text-primary rounded-lg font-medium text-sm min-h-[44px]">追加</button>
+      <button id="installDismiss" class="ml-2 p-2 min-h-[44px] min-w-[44px]" aria-label="閉じる">✕</button>
+    </div>
+  </div>
+
+  <!-- Offline Banner -->
+  <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-40 bg-yellow-500 text-gray-900 p-2 text-center text-sm" style="padding-top: calc(0.5rem + env(safe-area-inset-top));">
+    オフラインモード - 保存データはローカルのみ
+  </div>
+
+  <!-- Main Content Container -->
+  <div id="appContainer" class="max-w-2xl mx-auto">
+
+    <!-- Tab: Today -->
+    <div id="tabToday" class="tab-content p-4 pb-32">
+      <header class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">今日の緊張構造チャート</h1>
+        <div id="streakDisplay" class="flex items-center gap-4 text-sm">
+          <span id="currentStreak" class="font-medium">連続: 0日</span>
+          <span id="maxStreak" class="text-gray-600 dark:text-gray-400">最長: 0日</span>
+          <span id="streakBadge" class="ml-auto"></span>
+        </div>
+      </header>
+
+      <!-- Timer Section -->
+      <section class="mb-6 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-700 dark:text-gray-300">所要時間タイマー</h2>
+          <div class="flex gap-2">
+            <button data-timer="5" class="timer-btn px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 min-h-[44px]">5分</button>
+            <button data-timer="7" class="timer-btn px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 min-h-[44px]">7分</button>
+            <button data-timer="10" class="timer-btn px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 min-h-[44px]">10分</button>
+          </div>
+        </div>
+        <div class="text-center">
+          <div id="timerDisplay" class="text-4xl font-bold text-gray-900 dark:text-white mb-2">--:--</div>
+          <div class="flex gap-2 justify-center">
+            <button id="timerStart" class="px-4 py-2 bg-primary text-white rounded-lg font-medium min-h-[44px]">開始</button>
+            <button id="timerPause" class="hidden px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium min-h-[44px]">一時停止</button>
+            <button id="timerReset" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium min-h-[44px]">リセット</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Form -->
+      <form id="chartForm" class="space-y-6">
+
+        <!-- Goal -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">成果目標</label>
+          <input type="text" id="goalTitle" placeholder="何を達成したいか（短文）" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px]" aria-label="成果目標タイトル">
+          <textarea id="goalDetail" rows="2" placeholder="詳細（任意）" class="w-full mt-2 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white" aria-label="成果目標詳細"></textarea>
+        </section>
+
+        <!-- Reality -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">現実</label>
+          <textarea id="reality" rows="3" placeholder="今の状況は？" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white" aria-label="現実"></textarea>
+        </section>
+
+        <!-- Actions -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">アクション</label>
+            <button type="button" id="addAction" class="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium min-h-[44px]" aria-label="アクション追加">+ 追加</button>
+          </div>
+          <div id="actionsList" class="space-y-2"></div>
+        </section>
+
+        <!-- Status Note -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ステータス</label>
+          <input type="text" id="statusNote" placeholder="進捗状況のメモ" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px]" aria-label="ステータス">
+        </section>
+
+        <!-- Evidence -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">証拠・ログ</label>
+          <textarea id="evidence" rows="2" placeholder="実行した証拠やログ" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white" aria-label="証拠・ログ"></textarea>
+        </section>
+
+        <!-- Reflection -->
+        <section class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">リフレクション（任意）</label>
+          <textarea id="reflection" rows="3" placeholder="振り返り・気づき" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white" aria-label="リフレクション"></textarea>
+        </section>
+
+      </form>
+    </div>
+
+    <!-- Tab: History -->
+    <div id="tabHistory" class="tab-content hidden p-4 pb-32">
+      <header class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">履歴</h1>
+        <div class="space-y-2">
+          <input type="text" id="historySearch" placeholder="検索..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px]" aria-label="履歴検索">
+          <div class="flex gap-2">
+            <select id="historySortOrder" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px]" aria-label="並び順">
+              <option value="desc">新しい順</option>
+              <option value="asc">古い順</option>
+            </select>
+            <select id="historyFilter" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px]" aria-label="フィルタ">
+              <option value="all">すべて</option>
+              <option value="hasDone">完了アクションあり</option>
+            </select>
+          </div>
+        </div>
+      </header>
+      <div id="historyList" class="space-y-3"></div>
+    </div>
+
+    <!-- Tab: Settings -->
+    <div id="tabSettings" class="tab-content hidden p-4 pb-32">
+      <header class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">設定</h1>
+      </header>
+
+      <section class="space-y-4">
+
+        <!-- Reminder -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-lg font-medium mb-3">リマインダー</h2>
+          <div class="space-y-3">
+            <div>
+              <button id="testNotification" class="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium min-h-[44px]">Web通知テスト</button>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">ページを開いている時に通知を表示（要権限）</p>
+            </div>
+            <div>
+              <button id="downloadICS" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium min-h-[44px]">カレンダーに追加（ICS）</button>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">毎日のリマインダーをカレンダーアプリに登録（推奨）</p>
+              <div class="mt-2 flex items-center gap-2">
+                <label class="text-sm">時刻:</label>
+                <input type="time" id="reminderTime" value="20:00" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 min-h-[44px]">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Install -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-lg font-medium mb-3">ホーム画面に追加</h2>
+          <div id="installGuide">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2"><strong>Android:</strong> ブラウザメニューから「ホーム画面に追加」または上部のインストールバナーを使用</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>iOS:</strong> Safariの共有ボタン→「ホーム画面に追加」</p>
+          </div>
+        </div>
+
+        <!-- Backup -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-lg font-medium mb-3">バックアップ</h2>
+          <div class="space-y-2">
+            <button id="exportJSON" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium min-h-[44px]">JSONエクスポート</button>
+            <label class="block">
+              <input type="file" id="importJSON" accept=".json" class="hidden">
+              <span class="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium text-center cursor-pointer min-h-[44px]">JSONインポート</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Developer Tools (Hidden Toggle) -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <details>
+            <summary class="text-lg font-medium cursor-pointer">開発者ツール</summary>
+            <div class="mt-3 space-y-2">
+              <button id="devDateMinus" class="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-medium min-h-[44px]">日付 -1日</button>
+              <button id="devDatePlus" class="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-medium min-h-[44px]">日付 +1日</button>
+              <button id="devDateReset" class="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-medium min-h-[44px]">日付リセット</button>
+              <button id="devClearData" class="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-medium min-h-[44px]">全データ削除</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Usage Guide -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+          <h2 class="text-lg font-medium mb-3">簡易の使い方</h2>
+          <div class="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+            <p><strong>1. タイマー選択:</strong> 5/7/10分から選び、開始ボタンで時間計測開始</p>
+            <p><strong>2. 入力:</strong> 成果目標→現実→アクション（+で追加）→ステータス→証拠→リフレクション</p>
+            <p><strong>3. 保存:</strong> 下部の「保存して完了」ボタン（Cmd/Ctrl+S でも可）</p>
+            <p><strong>4. 習慣化:</strong> 連続日数（Streak）を伸ばしてバッジ獲得</p>
+            <p><strong>5. 履歴:</strong> 過去のチャートを検索・確認・編集・複製</p>
+            <p><strong>6. オフライン:</strong> PWAインストール後はオフラインでも動作</p>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+  </div>
+
+  <!-- Bottom CTA (Today tab only) -->
+  <div id="bottomCTA" class="fixed bottom-16 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 bottom-cta">
+    <div class="max-w-2xl mx-auto px-4 py-3">
+      <button id="saveBtn" class="w-full py-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-lg min-h-[56px] transition-colors" aria-label="保存して完了">
+        保存して完了
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 bottom-nav">
+    <div class="max-w-2xl mx-auto flex justify-around">
+      <button data-tab="today" class="nav-btn flex-1 py-3 text-center min-h-[56px] font-medium text-primary border-t-2 border-primary" aria-label="今日タブ">
+        <div>📝</div>
+        <div class="text-xs mt-1">今日</div>
+      </button>
+      <button data-tab="history" class="nav-btn flex-1 py-3 text-center min-h-[56px] font-medium text-gray-500 dark:text-gray-400" aria-label="履歴タブ">
+        <div>📚</div>
+        <div class="text-xs mt-1">履歴</div>
+      </button>
+      <button data-tab="settings" class="nav-btn flex-1 py-3 text-center min-h-[56px] font-medium text-gray-500 dark:text-gray-400" aria-label="設定タブ">
+        <div>⚙️</div>
+        <div class="text-xs mt-1">設定</div>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+    <div class="min-h-screen px-4 py-8">
+      <div class="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 modal-content">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">詳細</h2>
+          <button id="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg min-h-[44px] min-w-[44px]" aria-label="閉じる">✕</button>
+        </div>
+        <div id="detailContent" class="space-y-4 mb-6"></div>
+        <div class="flex gap-2 flex-wrap">
+          <button id="editEntry" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium min-h-[44px]">編集</button>
+          <button id="duplicateEntry" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium min-h-[44px]">今日に複製</button>
+          <button id="printEntry" class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium min-h-[44px]">印刷</button>
+          <button id="deleteEntry" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium min-h-[44px]">削除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-6 py-3 rounded-lg shadow-lg z-50" style="top: calc(5rem + env(safe-area-inset-top));"></div>
+
+  <script>
+    // ============================================
+    // State & Constants
+    // ============================================
+    const STORAGE_KEY = 'tensionChart.entries.v1';
+    const DATE_OFFSET_KEY = 'tensionChart.dateOffset';
+    const INSTALL_DISMISSED_KEY = 'tensionChart.installDismissed';
+
+    let entries = [];
+    let currentEntry = null;
+    let currentDetailId = null;
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let timerDuration = 5 * 60; // default 5 min
+    let isTimerRunning = false;
+    let autoSaveTimeout = null;
+    let deferredPrompt = null;
+    let dateOffsetDays = 0;
+
+    // ============================================
+    // Utility: Date/Time (Asia/Tokyo)
+    // ============================================
+    function getTodayString() {
+      const offset = parseInt(localStorage.getItem(DATE_OFFSET_KEY) || '0', 10);
+      dateOffsetDays = offset;
+      const now = new Date();
+      now.setDate(now.getDate() + offset);
+
+      const formatter = new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const parts = formatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year').value;
+      const month = parts.find(p => p.type === 'month').value;
+      const day = parts.find(p => p.type === 'day').value;
+
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split('-');
+      return `${y}年${m}月${d}日`;
+    }
+
+    function getCurrentTimestamp() {
+      return new Date().toISOString();
+    }
+
+    function daysDiff(date1, date2) {
+      const d1 = new Date(date1);
+      const d2 = new Date(date2);
+      const diffTime = Math.abs(d2 - d1);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    // ============================================
+    // LocalStorage CRUD
+    // ============================================
+    function loadEntries() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+          entries = JSON.parse(data);
+        }
+      } catch (e) {
+        console.error('Failed to load entries:', e);
+        showToast('データ読み込みエラー。バックアップから復元してください。');
+        entries = [];
+      }
+    }
+
+    function saveEntries() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      } catch (e) {
+        console.error('Failed to save entries:', e);
+        if (e.name === 'QuotaExceededError') {
+          showToast('容量不足。古いエントリを削除してください。');
+        } else {
+          showToast('保存エラー');
+        }
+      }
+    }
+
+    function findEntryByDate(date) {
+      return entries.find(e => e.date === date);
+    }
+
+    function upsertEntry(entry) {
+      const index = entries.findIndex(e => e.id === entry.id);
+      if (index >= 0) {
+        entries[index] = entry;
+      } else {
+        entries.push(entry);
+      }
+      saveEntries();
+    }
+
+    function deleteEntryById(id) {
+      entries = entries.filter(e => e.id !== id);
+      saveEntries();
+    }
+
+    // ============================================
+    // Streak Calculation
+    // ============================================
+    function calculateStreak() {
+      if (entries.length === 0) return { current: 0, max: 0 };
+
+      const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+      const today = getTodayString();
+
+      let current = 0;
+      let max = 0;
+      let tempStreak = 0;
+
+      // Current streak
+      let checkDate = today;
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].date === checkDate) {
+          current++;
+          const prev = new Date(checkDate);
+          prev.setDate(prev.getDate() - 1);
+          checkDate = prev.toISOString().split('T')[0];
+        } else {
+          break;
+        }
+      }
+
+      // Max streak
+      for (let i = 0; i < sorted.length; i++) {
+        if (i === 0) {
+          tempStreak = 1;
+        } else {
+          const diff = daysDiff(sorted[i].date, sorted[i - 1].date);
+          if (diff === 1) {
+            tempStreak++;
+          } else {
+            max = Math.max(max, tempStreak);
+            tempStreak = 1;
+          }
+        }
+      }
+      max = Math.max(max, tempStreak);
+
+      return { current, max };
+    }
+
+    function getStreakBadge(days) {
+      if (days >= 30) return '<span class="streak-shimmer text-lg font-bold">🏆 30日達成!</span>';
+      if (days >= 14) return '<span class="text-yellow-500 font-bold">🔥 2週間!</span>';
+      if (days >= 7) return '<span class="text-orange-500 font-bold">⭐ 1週間!</span>';
+      if (days >= 3) return '<span class="text-green-500 font-bold">✨ 3日継続!</span>';
+      return '';
+    }
+
+    function updateStreakDisplay() {
+      const { current, max } = calculateStreak();
+      document.getElementById('currentStreak').textContent = `連続: ${current}日`;
+      document.getElementById('maxStreak').textContent = `最長: ${max}日`;
+      document.getElementById('streakBadge').innerHTML = getStreakBadge(current);
+    }
+
+    // ============================================
+    // Form Management
+    // ============================================
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    function loadTodayEntry() {
+      const today = getTodayString();
+      currentEntry = findEntryByDate(today);
+
+      if (!currentEntry) {
+        currentEntry = {
+          id: generateId(),
+          date: today,
+          goal: { title: '', detail: '' },
+          reality: '',
+          actions: [],
+          statusNote: '',
+          evidence: '',
+          reflection: '',
+          createdAt: getCurrentTimestamp(),
+          updatedAt: getCurrentTimestamp()
+        };
+      }
+
+      renderForm();
+    }
+
+    function renderForm() {
+      document.getElementById('goalTitle').value = currentEntry.goal.title || '';
+      document.getElementById('goalDetail').value = currentEntry.goal.detail || '';
+      document.getElementById('reality').value = currentEntry.reality || '';
+      document.getElementById('statusNote').value = currentEntry.statusNote || '';
+      document.getElementById('evidence').value = currentEntry.evidence || '';
+      document.getElementById('reflection').value = currentEntry.reflection || '';
+
+      renderActions();
+    }
+
+    function renderActions() {
+      const container = document.getElementById('actionsList');
+      container.innerHTML = '';
+
+      currentEntry.actions.forEach((action, index) => {
+        const div = document.createElement('div');
+        div.className = 'action-item flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg';
+
+        const select = document.createElement('select');
+        select.className = 'px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 min-h-[44px]';
+        select.innerHTML = `
+          <option value="todo" ${action.status === 'todo' ? 'selected' : ''}>未着手</option>
+          <option value="doing" ${action.status === 'doing' ? 'selected' : ''}>進行中</option>
+          <option value="done" ${action.status === 'done' ? 'selected' : ''}>完了</option>
+        `;
+        select.addEventListener('change', (e) => {
+          currentEntry.actions[index].status = e.target.value;
+          scheduleAutoSave();
+        });
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = action.text;
+        input.placeholder = 'アクション内容';
+        input.className = 'flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 min-h-[44px]';
+        input.addEventListener('input', (e) => {
+          currentEntry.actions[index].text = e.target.value;
+          scheduleAutoSave();
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = '✕';
+        deleteBtn.className = 'px-3 py-2 bg-red-500 text-white rounded min-h-[44px] min-w-[44px]';
+        deleteBtn.setAttribute('aria-label', 'アクション削除');
+        deleteBtn.addEventListener('click', () => {
+          currentEntry.actions.splice(index, 1);
+          renderActions();
+          scheduleAutoSave();
+        });
+
+        div.appendChild(select);
+        div.appendChild(input);
+        div.appendChild(deleteBtn);
+        container.appendChild(div);
+      });
+    }
+
+    function collectFormData() {
+      currentEntry.goal = {
+        title: document.getElementById('goalTitle').value.trim(),
+        detail: document.getElementById('goalDetail').value.trim()
+      };
+      currentEntry.reality = document.getElementById('reality').value.trim();
+      currentEntry.statusNote = document.getElementById('statusNote').value.trim();
+      currentEntry.evidence = document.getElementById('evidence').value.trim();
+      currentEntry.reflection = document.getElementById('reflection').value.trim();
+      currentEntry.updatedAt = getCurrentTimestamp();
+    }
+
+    function saveCurrentEntry() {
+      collectFormData();
+      upsertEntry(currentEntry);
+      updateStreakDisplay();
+
+      // Vibration
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+
+      // Success animation
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.classList.add('success-bounce');
+      setTimeout(() => saveBtn.classList.remove('success-bounce'), 500);
+
+      showToast('✅ 保存しました！');
+    }
+
+    function scheduleAutoSave() {
+      clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = setTimeout(() => {
+        collectFormData();
+        // Silent save (no toast)
+      }, 3000);
+    }
+
+    // ============================================
+    // Timer
+    // ============================================
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerSeconds / 60);
+      const secs = timerSeconds % 60;
+      const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const timerEl = document.getElementById('timerDisplay');
+      timerEl.textContent = display;
+
+      // Pulse when zero
+      if (timerSeconds === 0 && isTimerRunning) {
+        timerEl.classList.add('pulse-slow', 'text-red-500');
+        document.getElementById('saveBtn').classList.add('pulse-slow');
+      } else {
+        timerEl.classList.remove('pulse-slow', 'text-red-500');
+        document.getElementById('saveBtn').classList.remove('pulse-slow');
+      }
+    }
+
+    function startTimer() {
+      if (isTimerRunning) return;
+      isTimerRunning = true;
+
+      document.getElementById('timerStart').classList.add('hidden');
+      document.getElementById('timerPause').classList.remove('hidden');
+
+      timerInterval = setInterval(() => {
+        if (timerSeconds > 0) {
+          timerSeconds--;
+        }
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isTimerRunning = false;
+      clearInterval(timerInterval);
+
+      document.getElementById('timerStart').classList.remove('hidden');
+      document.getElementById('timerPause').classList.add('hidden');
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      timerSeconds = timerDuration;
+      updateTimerDisplay();
+    }
+
+    function setTimerDuration(minutes) {
+      timerDuration = minutes * 60;
+      resetTimer();
+
+      // Update active state
+      document.querySelectorAll('.timer-btn').forEach(btn => {
+        btn.classList.remove('bg-primary', 'text-white');
+        btn.classList.add('bg-gray-100', 'dark:bg-gray-700');
+      });
+      event.target.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+      event.target.classList.add('bg-primary', 'text-white');
+    }
+
+    // ============================================
+    // History
+    // ============================================
+    function renderHistory() {
+      const container = document.getElementById('historyList');
+      const searchTerm = document.getElementById('historySearch').value.toLowerCase();
+      const sortOrder = document.getElementById('historySortOrder').value;
+      const filter = document.getElementById('historyFilter').value;
+
+      let filtered = [...entries];
+
+      // Search
+      if (searchTerm) {
+        filtered = filtered.filter(e => {
+          const searchStr = JSON.stringify(e).toLowerCase();
+          return searchStr.includes(searchTerm);
+        });
+      }
+
+      // Filter
+      if (filter === 'hasDone') {
+        filtered = filtered.filter(e => e.actions.some(a => a.status === 'done'));
+      }
+
+      // Sort
+      filtered.sort((a, b) => {
+        return sortOrder === 'desc'
+          ? b.date.localeCompare(a.date)
+          : a.date.localeCompare(b.date);
+      });
+
+      container.innerHTML = '';
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8">エントリがありません</p>';
+        return;
+      }
+
+      filtered.forEach(entry => {
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+
+        const doneCount = entry.actions.filter(a => a.status === 'done').length;
+        const totalActions = entry.actions.length;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between mb-2">
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">${formatDate(entry.date)}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">${doneCount}/${totalActions} 完了</div>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">${entry.goal.title || '（タイトルなし）'}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">${entry.statusNote || entry.reality || ''}</p>
+        `;
+
+        card.addEventListener('click', () => showDetail(entry.id));
+        card.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') showDetail(entry.id);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // ============================================
+    // Detail Modal
+    // ============================================
+    function showDetail(id) {
+      const entry = entries.find(e => e.id === id);
+      if (!entry) return;
+
+      currentDetailId = id;
+      const content = document.getElementById('detailContent');
+
+      content.innerHTML = `
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-3 mb-3">
+          <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">${formatDate(entry.date)}</div>
+          <h3 class="text-2xl font-bold text-gray-900 dark:text-white">${entry.goal.title || '（タイトルなし）'}</h3>
+          ${entry.goal.detail ? `<p class="text-gray-700 dark:text-gray-300 mt-2">${entry.goal.detail}</p>` : ''}
+        </div>
+
+        <div class="space-y-4">
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">現実</h4>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.reality || '—'}</p>
+          </section>
+
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">アクション</h4>
+            <ul class="space-y-1">
+              ${entry.actions.map(a => {
+                const icon = a.status === 'done' ? '✅' : a.status === 'doing' ? '🔄' : '⭕';
+                return `<li class="flex items-start gap-2"><span>${icon}</span><span>${a.text}</span></li>`;
+              }).join('') || '<li class="text-gray-500">—</li>'}
+            </ul>
+          </section>
+
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ステータス</h4>
+            <p class="text-gray-900 dark:text-white">${entry.statusNote || '—'}</p>
+          </section>
+
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">証拠・ログ</h4>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.evidence || '—'}</p>
+          </section>
+
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">リフレクション</h4>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.reflection || '—'}</p>
+          </section>
+        </div>
+      `;
+
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeDetail() {
+      document.getElementById('detailModal').classList.add('hidden');
+      currentDetailId = null;
+    }
+
+    function editCurrentDetail() {
+      const entry = entries.find(e => e.id === currentDetailId);
+      if (!entry) return;
+
+      currentEntry = entry;
+      renderForm();
+      closeDetail();
+      navigateToTab('today');
+      showToast('編集モードに切り替えました');
+    }
+
+    function duplicateCurrentDetail() {
+      const entry = entries.find(e => e.id === currentDetailId);
+      if (!entry) return;
+
+      const today = getTodayString();
+      const duplicate = {
+        ...entry,
+        id: generateId(),
+        date: today,
+        createdAt: getCurrentTimestamp(),
+        updatedAt: getCurrentTimestamp()
+      };
+
+      currentEntry = duplicate;
+      renderForm();
+      closeDetail();
+      navigateToTab('today');
+      showToast('今日に複製しました');
+    }
+
+    function printCurrentDetail() {
+      window.print();
+    }
+
+    function deleteCurrentDetail() {
+      if (!confirm('このエントリを削除しますか？')) return;
+
+      deleteEntryById(currentDetailId);
+      closeDetail();
+      renderHistory();
+      updateStreakDisplay();
+      showToast('削除しました');
+    }
+
+    // ============================================
+    // Navigation
+    // ============================================
+    function navigateToTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+
+      // Show target tab
+      const targetTab = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (targetTab) {
+        targetTab.classList.remove('hidden');
+      }
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-primary', 'border-t-2', 'border-primary');
+        btn.classList.add('text-gray-500', 'dark:text-gray-400');
+      });
+      const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+        activeBtn.classList.add('text-primary', 'border-t-2', 'border-primary');
+      }
+
+      // Show/hide bottom CTA
+      if (tabName === 'today') {
+        document.getElementById('bottomCTA').classList.remove('hidden');
+      } else {
+        document.getElementById('bottomCTA').classList.add('hidden');
+      }
+
+      // Update hash
+      window.location.hash = tabName;
+
+      // Refresh content
+      if (tabName === 'history') {
+        renderHistory();
+      }
+    }
+
+    function handleHashChange() {
+      const hash = window.location.hash.slice(1) || 'today';
+      if (hash.startsWith('detail/')) {
+        const id = hash.split('/')[1];
+        showDetail(id);
+      } else if (['today', 'history', 'settings'].includes(hash)) {
+        navigateToTab(hash);
+      } else {
+        navigateToTab('today');
+      }
+    }
+
+    // ============================================
+    // Export/Import
+    // ============================================
+    function exportJSON() {
+      const dataStr = JSON.stringify(entries, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tension-chart-backup-${getTodayString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('エクスポート完了');
+    }
+
+    function importJSON(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!Array.isArray(imported)) {
+            throw new Error('Invalid format');
+          }
+
+          // Merge strategy: ask user
+          const hasConflicts = imported.some(imp =>
+            entries.some(existing => existing.date === imp.date)
+          );
+
+          if (hasConflicts) {
+            if (!confirm('同じ日付のエントリがあります。上書きしますか？')) {
+              return;
+            }
+          }
+
+          imported.forEach(imp => {
+            const existing = entries.find(e => e.date === imp.date);
+            if (existing) {
+              // Overwrite
+              Object.assign(existing, imp);
+            } else {
+              entries.push(imp);
+            }
+          });
+
+          saveEntries();
+          renderHistory();
+          updateStreakDisplay();
+          showToast('インポート完了');
+        } catch (err) {
+          console.error('Import error:', err);
+          showToast('インポートエラー: ファイルが不正です');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ============================================
+    // ICS Calendar
+    // ============================================
+    function generateICS() {
+      const time = document.getElementById('reminderTime').value || '20:00';
+      const [hour, minute] = time.split(':');
+
+      const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Tension Chart//Daily Reminder//JP
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:tension-chart-reminder@${Date.now()}
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART;TZID=Asia/Tokyo:${formatICSDate(new Date(), hour, minute)}
+RRULE:FREQ=DAILY
+SUMMARY:緊張構造チャート入力
+DESCRIPTION:今日の緊張構造チャートを入力しましょう（5〜10分）
+BEGIN:VALARM
+TRIGGER:-PT5M
+ACTION:DISPLAY
+DESCRIPTION:緊張構造チャート入力の時間です
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+      const blob = new Blob([ics], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tension-chart-reminder.ics';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('カレンダーファイルをダウンロードしました。カレンダーアプリで開いてください。');
+    }
+
+    function formatICSDate(date, hour = '20', minute = '00') {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}${m}${d}T${hour}${minute}00`;
+    }
+
+    // ============================================
+    // Notifications
+    // ============================================
+    async function testNotification() {
+      if (!('Notification' in window)) {
+        showToast('このブラウザは通知に対応していません');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        new Notification('緊張構造チャート', {
+          body: '今日のチャートを入力しましょう！',
+          icon: './icon-192.png',
+          badge: './icon-192.png'
+        });
+        showToast('通知を送信しました');
+      } else if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          new Notification('緊張構造チャート', {
+            body: '通知が有効になりました！',
+            icon: './icon-192.png'
+          });
+          showToast('通知が有効になりました');
+        } else {
+          showToast('通知が拒否されました');
+        }
+      } else {
+        showToast('通知が拒否されています。ブラウザ設定から許可してください。');
+      }
+    }
+
+    // ============================================
+    // PWA Install
+    // ============================================
+    function showInstallBanner() {
+      const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY);
+      if (dismissed) return;
+
+      document.getElementById('installBanner').classList.remove('hidden');
+    }
+
+    function hideInstallBanner() {
+      document.getElementById('installBanner').classList.add('hidden');
+      localStorage.setItem(INSTALL_DISMISSED_KEY, 'true');
+    }
+
+    async function triggerInstall() {
+      if (!deferredPrompt) {
+        showToast('インストールプロンプトが利用できません');
+        return;
+      }
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === 'accepted') {
+        showToast('インストールありがとうございます！');
+      }
+
+      deferredPrompt = null;
+      hideInstallBanner();
+    }
+
+    // ============================================
+    // Developer Tools
+    // ============================================
+    function adjustDateOffset(days) {
+      const current = parseInt(localStorage.getItem(DATE_OFFSET_KEY) || '0', 10);
+      const newOffset = current + days;
+      localStorage.setItem(DATE_OFFSET_KEY, newOffset.toString());
+      dateOffsetDays = newOffset;
+
+      loadTodayEntry();
+      updateStreakDisplay();
+      showToast(`日付オフセット: ${newOffset > 0 ? '+' : ''}${newOffset}日`);
+    }
+
+    function resetDateOffset() {
+      localStorage.removeItem(DATE_OFFSET_KEY);
+      dateOffsetDays = 0;
+      loadTodayEntry();
+      updateStreakDisplay();
+      showToast('日付をリセットしました');
+    }
+
+    function clearAllData() {
+      if (!confirm('全データを削除します。本当によろしいですか？')) return;
+
+      localStorage.removeItem(STORAGE_KEY);
+      entries = [];
+      loadTodayEntry();
+      renderHistory();
+      updateStreakDisplay();
+      showToast('全データを削除しました');
+    }
+
+    // ============================================
+    // Toast
+    // ============================================
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // ============================================
+    // Online/Offline
+    // ============================================
+    function updateOnlineStatus() {
+      const banner = document.getElementById('offlineBanner');
+      if (!navigator.onLine) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // ============================================
+    // Keyboard Shortcuts
+    // ============================================
+    function handleKeyboardShortcuts(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveCurrentEntry();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveCurrentEntry();
+      }
+    }
+
+    // ============================================
+    // Event Listeners
+    // ============================================
+    function setupEventListeners() {
+      // Navigation
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          navigateToTab(e.currentTarget.dataset.tab);
+        });
+      });
+
+      // Timer
+      document.querySelectorAll('.timer-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          setTimerDuration(parseInt(e.target.dataset.timer, 10));
+        });
+      });
+      document.getElementById('timerStart').addEventListener('click', startTimer);
+      document.getElementById('timerPause').addEventListener('click', pauseTimer);
+      document.getElementById('timerReset').addEventListener('click', resetTimer);
+
+      // Form auto-save
+      document.getElementById('chartForm').addEventListener('input', scheduleAutoSave);
+
+      // Actions
+      document.getElementById('addAction').addEventListener('click', () => {
+        currentEntry.actions.push({
+          id: generateId(),
+          text: '',
+          status: 'todo'
+        });
+        renderActions();
+      });
+
+      // Save button
+      document.getElementById('saveBtn').addEventListener('click', saveCurrentEntry);
+
+      // History
+      document.getElementById('historySearch').addEventListener('input', renderHistory);
+      document.getElementById('historySortOrder').addEventListener('change', renderHistory);
+      document.getElementById('historyFilter').addEventListener('change', renderHistory);
+
+      // Detail modal
+      document.getElementById('closeModal').addEventListener('click', closeDetail);
+      document.getElementById('editEntry').addEventListener('click', editCurrentDetail);
+      document.getElementById('duplicateEntry').addEventListener('click', duplicateCurrentDetail);
+      document.getElementById('printEntry').addEventListener('click', printCurrentDetail);
+      document.getElementById('deleteEntry').addEventListener('click', deleteCurrentDetail);
+
+      // Settings
+      document.getElementById('testNotification').addEventListener('click', testNotification);
+      document.getElementById('downloadICS').addEventListener('click', generateICS);
+      document.getElementById('exportJSON').addEventListener('click', exportJSON);
+      document.getElementById('importJSON').addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+          importJSON(e.target.files[0]);
+        }
+      });
+
+      // Developer tools
+      document.getElementById('devDateMinus').addEventListener('click', () => adjustDateOffset(-1));
+      document.getElementById('devDatePlus').addEventListener('click', () => adjustDateOffset(1));
+      document.getElementById('devDateReset').addEventListener('click', resetDateOffset);
+      document.getElementById('devClearData').addEventListener('click', clearAllData);
+
+      // Install banner
+      document.getElementById('installBtn').addEventListener('click', triggerInstall);
+      document.getElementById('installDismiss').addEventListener('click', hideInstallBanner);
+
+      // Hash navigation
+      window.addEventListener('hashchange', handleHashChange);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', handleKeyboardShortcuts);
+
+      // Online/offline
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      // PWA install prompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallBanner();
+      });
+
+      // Modal backdrop click
+      document.getElementById('detailModal').addEventListener('click', (e) => {
+        if (e.target.id === 'detailModal') {
+          closeDetail();
+        }
+      });
+    }
+
+    // ============================================
+    // Service Worker Registration
+    // ============================================
+    async function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('./sw.js');
+          console.log('Service Worker registered:', registration);
+        } catch (error) {
+          console.error('Service Worker registration failed:', error);
+        }
+      }
+    }
+
+    // ============================================
+    // Initialization
+    // ============================================
+    function init() {
+      loadEntries();
+      loadTodayEntry();
+      updateStreakDisplay();
+      updateTimerDisplay();
+      setupEventListeners();
+      handleHashChange();
+      updateOnlineStatus();
+      registerServiceWorker();
+
+      // Set default timer to 5 min
+      document.querySelector('.timer-btn[data-timer="5"]').click();
+    }
+
+    // Start app
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
