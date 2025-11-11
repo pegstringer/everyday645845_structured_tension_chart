@@ -281,8 +281,8 @@
         <div id="stickyTimerDisplay" class="text-2xl font-bold text-primary">--:--</div>
       </div>
       <div class="flex gap-2">
-        <button id="stickyTimerStart" class="px-3 py-1 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">開始</button>
-        <button id="stickyTimerPause" class="hidden px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors">一時停止</button>
+        <button id="stickyTimerStart" class="px-3 py-1 bg-primary-dark text-white rounded-lg text-sm font-medium hover:bg-primary transition-colors shadow-md">開始</button>
+        <button id="stickyTimerPause" class="hidden px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors shadow-md">一時停止</button>
         <button id="stickyTimerReset" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">リセット</button>
       </div>
     </div>
@@ -313,9 +313,9 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">⏱️ タイマー</h2>
           <div class="flex gap-2">
-            <button data-timer="5" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 hover:bg-primary hover:text-white transition-all min-h-[44px]">5分</button>
-            <button data-timer="7" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 hover:bg-primary hover:text-white transition-all min-h-[44px]">7分</button>
-            <button data-timer="10" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 hover:bg-primary hover:text-white transition-all min-h-[44px]">10分</button>
+            <button data-timer="5" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all min-h-[44px]">5分</button>
+            <button data-timer="7" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all min-h-[44px]">7分</button>
+            <button data-timer="10" class="timer-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-primary hover:text-white transition-all min-h-[44px]">10分</button>
           </div>
         </div>
         <div class="text-center">
@@ -325,7 +325,7 @@
             </div>
           </div>
           <div class="flex gap-2 justify-center">
-            <button id="timerStart" class="px-6 py-3 bg-primary text-white rounded-xl font-medium min-h-[44px] hover:bg-primary-dark transition-colors shadow-lg">開始</button>
+            <button id="timerStart" class="px-6 py-3 bg-primary-dark text-white rounded-xl font-medium min-h-[44px] hover:bg-primary transition-colors shadow-lg">開始</button>
             <button id="timerPause" class="hidden px-6 py-3 bg-yellow-500 text-white rounded-xl font-medium min-h-[44px] hover:bg-yellow-600 transition-colors shadow-lg">一時停止</button>
             <button id="timerReset" class="px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-xl font-medium min-h-[44px] hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">リセット</button>
           </div>
@@ -362,7 +362,7 @@
               <span class="text-xl">✅</span>
               <span>アクション</span>
             </label>
-            <button type="button" id="addAction" class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium min-h-[44px] hover:bg-primary-dark transition-colors shadow-lg" aria-label="アクション追加">+ 追加</button>
+            <button type="button" id="addAction" class="px-4 py-2 bg-primary-dark text-white rounded-xl text-sm font-medium min-h-[44px] hover:bg-primary transition-colors shadow-lg" aria-label="アクション追加">+ 追加</button>
           </div>
           <div id="actionsList" class="space-y-2"></div>
         </section>
@@ -958,11 +958,11 @@
 
       // Update active state
       document.querySelectorAll('.timer-btn').forEach(btn => {
-        btn.classList.remove('bg-primary', 'text-white');
-        btn.classList.add('bg-gray-100', 'dark:bg-gray-700');
+        btn.classList.remove('bg-primary-dark', 'text-white');
+        btn.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-900', 'dark:text-white');
       });
-      buttonElement.classList.remove('bg-gray-100', 'dark:bg-gray-700');
-      buttonElement.classList.add('bg-primary', 'text-white');
+      buttonElement.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-900', 'dark:text-white');
+      buttonElement.classList.add('bg-primary-dark', 'text-white');
     }
 
     // ============================================
@@ -1179,6 +1179,12 @@
         document.getElementById('bottomCTA').classList.remove('hidden');
       } else {
         document.getElementById('bottomCTA').classList.add('hidden');
+      }
+
+      // Show/hide sticky timer (only for today tab)
+      const stickyTimer = document.getElementById('stickyTimer');
+      if (tabName !== 'today') {
+        stickyTimer.classList.remove('visible');
       }
 
       // Update hash
