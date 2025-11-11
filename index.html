@@ -718,6 +718,53 @@
         const div = document.createElement('div');
         div.className = 'action-item flex items-center gap-2 bg-white/50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700';
 
+        // Move buttons container
+        const moveButtons = document.createElement('div');
+        moveButtons.className = 'flex flex-col gap-1';
+
+        // Move up button
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.className = 'px-2 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded min-h-[20px] min-w-[32px] hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-xs';
+        upBtn.setAttribute('aria-label', '上に移動');
+        upBtn.disabled = index === 0;
+        if (index === 0) {
+          upBtn.classList.add('opacity-30', 'cursor-not-allowed');
+        }
+        upBtn.addEventListener('click', () => {
+          if (index > 0) {
+            // Swap with previous item
+            [currentEntry.actions[index - 1], currentEntry.actions[index]] =
+            [currentEntry.actions[index], currentEntry.actions[index - 1]];
+            renderActions();
+            scheduleAutoSave();
+          }
+        });
+
+        // Move down button
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.className = 'px-2 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded min-h-[20px] min-w-[32px] hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-xs';
+        downBtn.setAttribute('aria-label', '下に移動');
+        downBtn.disabled = index === currentEntry.actions.length - 1;
+        if (index === currentEntry.actions.length - 1) {
+          downBtn.classList.add('opacity-30', 'cursor-not-allowed');
+        }
+        downBtn.addEventListener('click', () => {
+          if (index < currentEntry.actions.length - 1) {
+            // Swap with next item
+            [currentEntry.actions[index], currentEntry.actions[index + 1]] =
+            [currentEntry.actions[index + 1], currentEntry.actions[index]];
+            renderActions();
+            scheduleAutoSave();
+          }
+        });
+
+        moveButtons.appendChild(upBtn);
+        moveButtons.appendChild(downBtn);
+
         const select = document.createElement('select');
         select.className = 'px-2 py-1 border-2 border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 min-h-[44px] focus:border-primary transition-colors';
         select.innerHTML = `
@@ -751,6 +798,7 @@
           scheduleAutoSave();
         });
 
+        div.appendChild(moveButtons);
         div.appendChild(select);
         div.appendChild(input);
         div.appendChild(deleteBtn);
