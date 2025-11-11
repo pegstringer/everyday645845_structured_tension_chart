@@ -226,6 +226,33 @@
         background: linear-gradient(135deg, #818CF8 0%, #C084FC 100%);
       }
     }
+
+    /* Sticky Timer Bar */
+    .sticky-timer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      padding: 0.75rem 1rem;
+      padding-top: calc(0.75rem + env(safe-area-inset-top));
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .sticky-timer {
+        background: rgba(17, 24, 39, 0.95);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .sticky-timer.visible {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body class="text-gray-900 dark:text-gray-100 min-h-screen pb-20">
@@ -244,6 +271,21 @@
   <!-- Offline Banner -->
   <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-40 bg-yellow-500 text-gray-900 p-2 text-center text-sm font-medium" style="padding-top: calc(0.5rem + env(safe-area-inset-top));">
     ⚠️ オフラインモード - 保存データはローカルのみ
+  </div>
+
+  <!-- Sticky Timer Bar (shows when scrolled) -->
+  <div id="stickyTimer" class="sticky-timer">
+    <div class="max-w-2xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">⏱️</span>
+        <div id="stickyTimerDisplay" class="text-2xl font-bold text-primary">--:--</div>
+      </div>
+      <div class="flex gap-2">
+        <button id="stickyTimerStart" class="px-3 py-1 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">開始</button>
+        <button id="stickyTimerPause" class="hidden px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors">一時停止</button>
+        <button id="stickyTimerReset" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">リセット</button>
+      </div>
+    </div>
   </div>
 
   <!-- Main Content Container -->
@@ -718,6 +760,53 @@
         const div = document.createElement('div');
         div.className = 'action-item flex items-center gap-2 bg-white/50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700';
 
+        // Move buttons container
+        const moveButtons = document.createElement('div');
+        moveButtons.className = 'flex flex-col gap-1';
+
+        // Move up button
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.className = 'px-2 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded min-h-[20px] min-w-[32px] hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-xs';
+        upBtn.setAttribute('aria-label', '上に移動');
+        upBtn.disabled = index === 0;
+        if (index === 0) {
+          upBtn.classList.add('opacity-30', 'cursor-not-allowed');
+        }
+        upBtn.addEventListener('click', () => {
+          if (index > 0) {
+            // Swap with previous item
+            [currentEntry.actions[index - 1], currentEntry.actions[index]] =
+            [currentEntry.actions[index], currentEntry.actions[index - 1]];
+            renderActions();
+            scheduleAutoSave();
+          }
+        });
+
+        // Move down button
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.className = 'px-2 py-1 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded min-h-[20px] min-w-[32px] hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-xs';
+        downBtn.setAttribute('aria-label', '下に移動');
+        downBtn.disabled = index === currentEntry.actions.length - 1;
+        if (index === currentEntry.actions.length - 1) {
+          downBtn.classList.add('opacity-30', 'cursor-not-allowed');
+        }
+        downBtn.addEventListener('click', () => {
+          if (index < currentEntry.actions.length - 1) {
+            // Swap with next item
+            [currentEntry.actions[index], currentEntry.actions[index + 1]] =
+            [currentEntry.actions[index + 1], currentEntry.actions[index]];
+            renderActions();
+            scheduleAutoSave();
+          }
+        });
+
+        moveButtons.appendChild(upBtn);
+        moveButtons.appendChild(downBtn);
+
         const select = document.createElement('select');
         select.className = 'px-2 py-1 border-2 border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 min-h-[44px] focus:border-primary transition-colors';
         select.innerHTML = `
@@ -751,6 +840,7 @@
           scheduleAutoSave();
         });
 
+        div.appendChild(moveButtons);
         div.appendChild(select);
         div.appendChild(input);
         div.appendChild(deleteBtn);
@@ -804,14 +894,20 @@
       const secs = Math.abs(timerSeconds) % 60;
       const sign = timerSeconds < 0 ? '-' : '';
       const display = `${sign}${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      // Update both timers
       const timerEl = document.getElementById('timerDisplay');
+      const stickyTimerEl = document.getElementById('stickyTimerDisplay');
       timerEl.textContent = display;
+      stickyTimerEl.textContent = display;
 
       // Visual feedback when time is up
       if (timerSeconds <= 0 && isTimerRunning) {
         timerEl.classList.add('pulse-slow', 'text-red-500');
+        stickyTimerEl.classList.add('pulse-slow', 'text-red-500');
       } else {
         timerEl.classList.remove('pulse-slow', 'text-red-500');
+        stickyTimerEl.classList.remove('pulse-slow', 'text-red-500');
       }
     }
 
@@ -819,8 +915,11 @@
       if (isTimerRunning) return;
       isTimerRunning = true;
 
+      // Update both timer button sets
       document.getElementById('timerStart').classList.add('hidden');
       document.getElementById('timerPause').classList.remove('hidden');
+      document.getElementById('stickyTimerStart').classList.add('hidden');
+      document.getElementById('stickyTimerPause').classList.remove('hidden');
 
       timerInterval = setInterval(() => {
         timerSeconds--;
@@ -840,8 +939,11 @@
       isTimerRunning = false;
       clearInterval(timerInterval);
 
+      // Update both timer button sets
       document.getElementById('timerStart').classList.remove('hidden');
       document.getElementById('timerPause').classList.add('hidden');
+      document.getElementById('stickyTimerStart').classList.remove('hidden');
+      document.getElementById('stickyTimerPause').classList.add('hidden');
     }
 
     function resetTimer() {
@@ -1359,6 +1461,34 @@ END:VCALENDAR`;
       document.getElementById('timerStart').addEventListener('click', startTimer);
       document.getElementById('timerPause').addEventListener('click', pauseTimer);
       document.getElementById('timerReset').addEventListener('click', resetTimer);
+
+      // Sticky timer buttons
+      document.getElementById('stickyTimerStart').addEventListener('click', startTimer);
+      document.getElementById('stickyTimerPause').addEventListener('click', pauseTimer);
+      document.getElementById('stickyTimerReset').addEventListener('click', resetTimer);
+
+      // Scroll event for sticky timer
+      let timerSectionObserver = null;
+      const timerSection = document.querySelector('#tabToday section:nth-child(2)'); // Timer section
+      const stickyTimer = document.getElementById('stickyTimer');
+
+      if (timerSection && 'IntersectionObserver' in window) {
+        timerSectionObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) {
+              // Timer section is out of view, show sticky timer
+              stickyTimer.classList.add('visible');
+            } else {
+              // Timer section is in view, hide sticky timer
+              stickyTimer.classList.remove('visible');
+            }
+          });
+        }, {
+          threshold: 0,
+          rootMargin: '-100px 0px 0px 0px'
+        });
+        timerSectionObserver.observe(timerSection);
+      }
 
       // Form auto-save
       document.getElementById('chartForm').addEventListener('input', scheduleAutoSave);
