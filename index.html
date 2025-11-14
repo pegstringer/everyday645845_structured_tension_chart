@@ -430,19 +430,19 @@
         <section class="glass-card rounded-2xl p-5 shadow-lg">
           <label class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
             <span class="text-xl">🎯</span>
-            <span>創り出したいもの</span>
+            <span>成果目標</span>
           </label>
-          <input type="text" id="goalTitle" placeholder="何を達成したいか（短文）" class="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px] focus:border-primary transition-colors" aria-label="創り出したいものタイトル">
-          <textarea id="goalDetail" rows="2" placeholder="詳細（任意）" class="w-full mt-2 px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary transition-colors" aria-label="創り出したいもの詳細"></textarea>
+          <input type="text" id="goalTitle" placeholder="何を達成したいか（短文）" class="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px] focus:border-primary transition-colors" aria-label="成果目標タイトル">
+          <textarea id="goalDetail" rows="2" placeholder="詳細（任意）" class="w-full mt-2 px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary transition-colors" aria-label="成果目標詳細"></textarea>
         </section>
 
         <!-- Reality -->
         <section class="glass-card rounded-2xl p-5 shadow-lg">
           <label class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
             <span class="text-xl">📊</span>
-            <span>創り出したいものから見た今の現実</span>
+            <span>現実</span>
           </label>
-          <textarea id="reality" rows="3" placeholder="今の状況は？" class="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary transition-colors" aria-label="創り出したいものから見た今の現実"></textarea>
+          <textarea id="reality" rows="3" placeholder="今の状況は？" class="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary transition-colors" aria-label="現実"></textarea>
         </section>
 
         <!-- Actions -->
@@ -450,11 +450,20 @@
           <div class="flex items-center justify-between mb-3">
             <label class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300">
               <span class="text-xl">✅</span>
-              <span>アクションステップ</span>
+              <span>アクション</span>
             </label>
-            <button type="button" id="addAction" class="px-4 py-2 bg-primary-dark text-white rounded-xl text-sm font-medium min-h-[44px] hover:bg-primary transition-colors shadow-lg" aria-label="アクションステップ追加">+ 追加</button>
+            <button type="button" id="addAction" class="px-4 py-2 bg-primary-dark text-white rounded-xl text-sm font-medium min-h-[44px] hover:bg-primary transition-colors shadow-lg" aria-label="アクション追加">+ 追加</button>
           </div>
           <div id="actionsList" class="space-y-2"></div>
+        </section>
+
+        <!-- Status Note -->
+        <section class="glass-card rounded-2xl p-5 shadow-lg">
+          <label class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+            <span class="text-xl">📝</span>
+            <span>ステータス</span>
+          </label>
+          <input type="text" id="statusNote" placeholder="進捗状況のメモ" class="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-[44px] focus:border-primary transition-colors" aria-label="ステータス">
         </section>
 
         <!-- Evidence -->
@@ -491,7 +500,7 @@
             </select>
             <select id="historyFilter" class="flex-1 px-4 py-3 border-2 border-gray-400 dark:border-gray-500 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-medium min-h-[44px] focus:border-primary transition-colors" aria-label="フィルタ">
               <option value="all">すべて</option>
-              <option value="hasDone">完了アクションステップあり</option>
+              <option value="hasDone">完了アクションあり</option>
             </select>
           </div>
         </div>
@@ -565,7 +574,7 @@
           <h2 class="text-lg font-bold mb-4 text-gray-800 dark:text-gray-200">📖 簡易の使い方</h2>
           <div class="text-sm text-gray-700 dark:text-gray-300 space-y-2">
             <p><strong>1. タイマー選択:</strong> 5/7/10分から選び、開始ボタンで時間計測開始</p>
-            <p><strong>2. 入力:</strong> 創り出したいもの→創り出したいものから見た今の現実→アクションステップ（+で追加）→証拠→リフレクション</p>
+            <p><strong>2. 入力:</strong> 成果目標→現実→アクション（+で追加）→ステータス→証拠→リフレクション</p>
             <p><strong>3. 保存:</strong> 下部の「保存して完了」ボタン（Cmd/Ctrl+S でも可）</p>
             <p><strong>4. 習慣化:</strong> 連続日数（Streak）を伸ばしてバッジ獲得</p>
             <p><strong>5. 履歴:</strong> 過去のチャートを検索・確認・編集・複製</p>
@@ -1067,7 +1076,7 @@
         const input = document.createElement('input');
         input.type = 'text';
         input.value = action.text;
-        input.placeholder = 'アクションステップ内容';
+        input.placeholder = 'アクション内容';
         input.className = 'flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white min-h-[44px] focus:border-primary transition-colors';
         input.addEventListener('input', (e) => {
           currentEntry.actions[index].text = e.target.value;
@@ -1078,7 +1087,7 @@
         deleteBtn.type = 'button';
         deleteBtn.textContent = '✕';
         deleteBtn.className = 'px-3 py-2 bg-red-500 text-white rounded-lg min-h-[44px] min-w-[44px] hover:bg-red-600 transition-colors';
-        deleteBtn.setAttribute('aria-label', 'アクションステップ削除');
+        deleteBtn.setAttribute('aria-label', 'アクション削除');
         deleteBtn.addEventListener('click', () => {
           currentEntry.actions.splice(index, 1);
           renderActions();
@@ -1296,7 +1305,7 @@
           <section>
             <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <span>📊</span>
-              <span>創り出したいものから見た今の現実</span>
+              <span>現実</span>
             </h4>
             <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${escapeHtml(entry.reality || '—')}</p>
           </section>
@@ -1304,7 +1313,7 @@
           <section>
             <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <span>✅</span>
-              <span>アクションステップ</span>
+              <span>アクション</span>
             </h4>
             <ul class="space-y-1">
               ${entry.actions.map(a => {
@@ -1312,6 +1321,14 @@
                 return `<li class="flex items-start gap-2"><span>${icon}</span><span>${escapeHtml(a.text)}</span></li>`;
               }).join('') || '<li class="text-gray-500">—</li>'}
             </ul>
+          </section>
+
+          <section>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span>📝</span>
+              <span>ステータス</span>
+            </h4>
+            <p class="text-gray-900 dark:text-white">${escapeHtml(entry.statusNote || '—')}</p>
           </section>
 
           <section>
@@ -1853,7 +1870,7 @@ END:VCALENDAR`;
         throw new Error('Invalid date format');
       }
 
-      // アクションステップ数の制限
+      // アクション数の制限
       if (entry.actions.length > 50) {
         throw new Error('Too many actions');
       }
@@ -1875,7 +1892,7 @@ END:VCALENDAR`;
         }
       }
 
-      // アクションステップのバリデーション
+      // アクションのバリデーション
       for (const action of entry.actions) {
         if (!action.text || typeof action.text !== 'string') {
           throw new Error('Invalid action text');
