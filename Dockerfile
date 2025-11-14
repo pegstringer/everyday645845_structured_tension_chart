@@ -11,8 +11,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY index.html /usr/share/nginx/html/
 COPY manifest.webmanifest /usr/share/nginx/html/
 COPY sw.js /usr/share/nginx/html/
-COPY icon-192.png /usr/share/nginx/html/ 2>/dev/null || true
-COPY icon-512.png /usr/share/nginx/html/ 2>/dev/null || true
 
 # Set proper permissions
 RUN chmod -R 755 /usr/share/nginx/html
