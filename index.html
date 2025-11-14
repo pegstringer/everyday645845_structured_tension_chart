@@ -826,6 +826,9 @@
       }
 
       try {
+        // Validate entry before saving
+        validateEntry(entry);
+
         const { doc, setDoc } = window.firebaseModules;
         const db = window.firebaseDb;
 
@@ -1248,8 +1251,8 @@
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">${formatDate(entry.date)}</div>
             <div class="text-sm font-bold text-primary">${doneCount}/${totalActions} 完了</div>
           </div>
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">${entry.goal.title || '（タイトルなし）'}</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">${entry.statusNote || entry.reality || ''}</p>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">${escapeHtml(entry.goal.title || '（タイトルなし）')}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">${escapeHtml(entry.statusNote || entry.reality || '')}</p>
         `;
 
         card.addEventListener('click', () => showDetail(entry.id));
@@ -1274,8 +1277,8 @@
       content.innerHTML = `
         <div class="border-b border-gray-200 dark:border-gray-700 pb-3 mb-3">
           <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">${formatDate(entry.date)}</div>
-          <h3 class="text-2xl font-bold gradient-text">${entry.goal.title || '（タイトルなし）'}</h3>
-          ${entry.goal.detail ? `<p class="text-gray-700 dark:text-gray-300 mt-2">${entry.goal.detail}</p>` : ''}
+          <h3 class="text-2xl font-bold gradient-text">${escapeHtml(entry.goal.title || '（タイトルなし）')}</h3>
+          ${entry.goal.detail ? `<p class="text-gray-700 dark:text-gray-300 mt-2">${escapeHtml(entry.goal.detail)}</p>` : ''}
         </div>
 
         <div class="space-y-4">
@@ -1284,7 +1287,7 @@
               <span>📊</span>
               <span>現実</span>
             </h4>
-            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.reality || '—'}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${escapeHtml(entry.reality || '—')}</p>
           </section>
 
           <section>
@@ -1295,7 +1298,7 @@
             <ul class="space-y-1">
               ${entry.actions.map(a => {
                 const icon = a.status === 'done' ? '✅' : a.status === 'doing' ? '🔄' : '⭕';
-                return `<li class="flex items-start gap-2"><span>${icon}</span><span>${a.text}</span></li>`;
+                return `<li class="flex items-start gap-2"><span>${icon}</span><span>${escapeHtml(a.text)}</span></li>`;
               }).join('') || '<li class="text-gray-500">—</li>'}
             </ul>
           </section>
@@ -1305,7 +1308,7 @@
               <span>📝</span>
               <span>ステータス</span>
             </h4>
-            <p class="text-gray-900 dark:text-white">${entry.statusNote || '—'}</p>
+            <p class="text-gray-900 dark:text-white">${escapeHtml(entry.statusNote || '—')}</p>
           </section>
 
           <section>
@@ -1313,7 +1316,7 @@
               <span>📸</span>
               <span>証拠・ログ</span>
             </h4>
-            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.evidence || '—'}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${escapeHtml(entry.evidence || '—')}</p>
           </section>
 
           <section>
@@ -1321,7 +1324,7 @@
               <span>💭</span>
               <span>リフレクション</span>
             </h4>
-            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${entry.reflection || '—'}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-wrap">${escapeHtml(entry.reflection || '—')}</p>
           </section>
         </div>
       `;
@@ -1826,6 +1829,63 @@ END:VCALENDAR`;
           console.error('Service Worker registration failed:', error);
         }
       }
+    }
+
+    // ============================================
+    // Security: HTML Escape Function
+    // ============================================
+    function escapeHtml(text) {
+      if (typeof text !== 'string') return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ============================================
+    // Security: Input Validation
+    // ============================================
+    function validateEntry(entry) {
+      // 日付フォーマットの検証
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) {
+        throw new Error('Invalid date format');
+      }
+
+      // アクション数の制限
+      if (entry.actions.length > 50) {
+        throw new Error('Too many actions');
+      }
+
+      // テキストの長さ制限（10KB）
+      const maxLength = 10000;
+      const fields = [
+        entry.goal?.title,
+        entry.goal?.detail,
+        entry.reality,
+        entry.statusNote,
+        entry.evidence,
+        entry.reflection
+      ];
+
+      for (const field of fields) {
+        if (field && field.length > maxLength) {
+          throw new Error('Text too long');
+        }
+      }
+
+      // アクションのバリデーション
+      for (const action of entry.actions) {
+        if (!action.text || typeof action.text !== 'string') {
+          throw new Error('Invalid action text');
+        }
+        if (action.text.length > maxLength) {
+          throw new Error('Action text too long');
+        }
+        if (!['todo', 'doing', 'done'].includes(action.status)) {
+          throw new Error('Invalid action status');
+        }
+      }
+
+      return true;
     }
 
     // ============================================

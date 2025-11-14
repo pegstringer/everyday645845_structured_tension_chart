@@ -1,25 +1,86 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ヘルパー関数
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidDate(dateString) {
+      return dateString is string
+        && dateString.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isValidEntry(data) {
+      return data.keys().hasAll(['date', 'goal', 'reality', 'actions', 'statusNote', 'evidence', 'reflection', 'createdAt', 'updatedAt'])
+        && isValidDate(data.date)
+        && data.goal is map
+        && data.goal.keys().hasAll(['title', 'detail'])
+        && data.reality is string
+        && data.actions is list
+        && data.actions.size() <= 50  // アクション数の制限
+        && data.statusNote is string
+        && data.evidence is string
+        && data.reflection is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTextLength(text) {
+      return text.size() <= 10000;  // 10KB制限
+    }
+
+    function isValidAction(action) {
+      return action is map
+        && action.keys().hasAll(['id', 'text', 'status'])
+        && action.text is string
+        && action.text.size() <= 10000
+        && action.status is string
+        && action.status in ['todo', 'doing', 'done'];
+    }
+
+    function allActionsValid(actions) {
+      return actions.size() == 0 || actions.hasAll([true]);
+    }
+
     // ユーザーデータへのアクセスルール
     match /users/{userId} {
-      // ユーザーは自分のドキュメントのみアクセス可能
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
 
-      // ユーザーのエントリへのアクセスルール
       match /entries/{entryId} {
-        // ユーザーは自分のエントリのみ読み書き可能
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
 
-        // データ検証: 必須フィールドの存在確認
-        allow create: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.resource.data.keys().hasAll(['date', 'goal', 'reality', 'actions', 'createdAt', 'updatedAt']);
+        allow create: if isOwner(userId)
+                      && isValidEntry(request.resource.data)
+                      && isValidTextLength(request.resource.data.goal.title)
+                      && isValidTextLength(request.resource.data.goal.detail)
+                      && isValidTextLength(request.resource.data.reality)
+                      && isValidTextLength(request.resource.data.statusNote)
+                      && isValidTextLength(request.resource.data.evidence)
+                      && isValidTextLength(request.resource.data.reflection)
+                      && request.resource.data.createdAt == request.time
+                      && request.resource.data.updatedAt == request.time;
 
-        allow update: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.resource.data.keys().hasAll(['date', 'goal', 'reality', 'actions', 'createdAt', 'updatedAt'])
-                      && request.resource.data.createdAt == resource.data.createdAt; // createdAtは変更不可
+        allow update: if isOwner(userId)
+                      && isValidEntry(request.resource.data)
+                      && isValidTextLength(request.resource.data.goal.title)
+                      && isValidTextLength(request.resource.data.goal.detail)
+                      && isValidTextLength(request.resource.data.reality)
+                      && isValidTextLength(request.resource.data.statusNote)
+                      && isValidTextLength(request.resource.data.evidence)
+                      && isValidTextLength(request.resource.data.reflection)
+                      && request.resource.data.createdAt == resource.data.createdAt
+                      && request.resource.data.date == resource.data.date
+                      && request.resource.data.updatedAt == request.time;
+
+        allow delete: if isOwner(userId);
       }
     }
 
