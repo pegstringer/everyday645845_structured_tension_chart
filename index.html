@@ -60,6 +60,11 @@
       orderBy,
       where
     };
+
+    // Firebase初期化完了を通知
+    window.firebaseReady = true;
+    console.log('[Firebase] SDK loaded and ready');
+    window.dispatchEvent(new Event('firebaseReady'));
   </script>
 
   <style>
@@ -702,15 +707,23 @@
     }
 
     async function handleGoogleSignIn() {
+      console.log('[Auth] handleGoogleSignIn called');
+      console.log('[Auth] Firebase check:', {
+        modules: !!window.firebaseModules,
+        auth: !!window.firebaseAuth
+      });
+
       const { signInWithPopup, GoogleAuthProvider } = window.firebaseModules;
       const auth = window.firebaseAuth;
 
       try {
+        console.log('[Auth] Creating provider...');
         const provider = new GoogleAuthProvider();
+        console.log('[Auth] Calling signInWithPopup...');
         const result = await signInWithPopup(auth, provider);
-        console.log('Sign in successful:', result.user.email);
+        console.log('[Auth] Sign in successful:', result.user.email);
       } catch (error) {
-        console.error('Sign in error:', error);
+        console.error('[Auth] Sign in error:', error);
         showToast('ログインエラー: ' + error.message);
       }
     }
@@ -1908,11 +1921,44 @@ END:VCALENDAR`;
       }
     }
 
-    // Start app - initialize auth first
+    // ============================================
+    // Initialization - Firebase準備完了を待つ
+    // ============================================
+
+    async function waitForFirebase() {
+      return new Promise((resolve) => {
+        if (window.firebaseReady) {
+          console.log('[App] Firebase already ready');
+          resolve();
+        } else {
+          console.log('[App] Waiting for Firebase...');
+          window.addEventListener('firebaseReady', () => {
+            console.log('[App] Firebase ready event received');
+            resolve();
+          }, { once: true });
+        }
+      });
+    }
+
+    async function startApp() {
+      console.log('[App] Starting application...');
+
+      await waitForFirebase();
+
+      console.log('[App] Firebase modules available:', {
+        auth: !!window.firebaseAuth,
+        db: !!window.firebaseDb,
+        modules: !!window.firebaseModules
+      });
+
+      await initializeAuth();
+    }
+
+    // Start app
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeAuth);
+      document.addEventListener('DOMContentLoaded', startApp);
     } else {
-      initializeAuth();
+      startApp();
     }
   </script>
 </body>
