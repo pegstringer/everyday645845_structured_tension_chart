@@ -663,6 +663,11 @@
       const { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } = window.firebaseModules;
       const auth = window.firebaseAuth;
 
+      // ⭐ FIX: 認証状態チェックの前にログインボタンのイベントリスナーを設定
+      // これにより、未ログイン状態でもボタンが機能する
+      document.getElementById('googleSignInBtn').addEventListener('click', handleGoogleSignIn);
+      document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
+
       return new Promise((resolve) => {
         onAuthStateChanged(auth, async (user) => {
           // Hide loading screen
