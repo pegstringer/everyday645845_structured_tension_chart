@@ -64,9 +64,7 @@ service cloud.firestore {
                       && isValidTextLength(request.resource.data.reality)
                       && isValidTextLength(request.resource.data.statusNote)
                       && isValidTextLength(request.resource.data.evidence)
-                      && isValidTextLength(request.resource.data.reflection)
-                      && request.resource.data.createdAt == request.time
-                      && request.resource.data.updatedAt == request.time;
+                      && isValidTextLength(request.resource.data.reflection);
 
         allow update: if isOwner(userId)
                       && isValidEntry(request.resource.data)
@@ -77,8 +75,7 @@ service cloud.firestore {
                       && isValidTextLength(request.resource.data.evidence)
                       && isValidTextLength(request.resource.data.reflection)
                       && request.resource.data.createdAt == resource.data.createdAt
-                      && request.resource.data.date == resource.data.date
-                      && request.resource.data.updatedAt == request.time;
+                      && request.resource.data.date == resource.data.date;
 
         allow delete: if isOwner(userId);
       }

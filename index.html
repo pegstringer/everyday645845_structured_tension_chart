@@ -24,7 +24,7 @@
     // Import Firebase modules
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, orderBy, where, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
     // Firebase configuration
     const firebaseConfig = {
@@ -58,7 +58,8 @@
       deleteDoc,
       query,
       orderBy,
-      where
+      where,
+      Timestamp
     };
 
     // Firebase初期化完了を通知
@@ -782,7 +783,8 @@
     }
 
     function getCurrentTimestamp() {
-      return new Date().toISOString();
+      const { Timestamp } = window.firebaseModules;
+      return Timestamp.now();
     }
 
     function daysDiff(date1, date2) {
